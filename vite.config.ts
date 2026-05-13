@@ -8,6 +8,9 @@ export default defineConfig({
 	ssr: {
 		external: ['canvas']
 	},
+	optimizeDeps: {
+		exclude: ['canvas']
+	},
 	resolve: {
 		alias: {
 			// This prevents Vite from trying to process the native binary
