@@ -2,6 +2,7 @@
 FROM node:24-alpine AS build
 WORKDIR /app
 COPY . .
+RUN apk add --no-cache python3 make g++
 RUN npm ci && npm run build
 
 # Step 2: Production stage
