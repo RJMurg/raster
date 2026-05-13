@@ -1,18 +1,5 @@
-# SK
+![](https://api.murga.cloud/raster/header?title=RASTER?subtitle=A%20README%20title%20image%20generator)
 
-SK is my personal template for building SvelteKit applications.
-It is the upstream parent of:
+# Raster
 
-- SK-DB
-- SK-DB-Auth
-
-# Stack
-
-- Svelte 5
-- SvelteKit 2
-- Lucide 1
-- Shadcn 1
-- Tailwind 4
-- Vite 8
-- Vitest 4
-- Playwright 1
+Raster is a SvelteKit application which generates images to go at the top of READMEs.
