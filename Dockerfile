@@ -2,7 +2,6 @@
 FROM node:24-alpine AS build
 WORKDIR /app
 
-# Install build-time dependencies
 RUN apk add --no-cache \
     python3 \
     make \
@@ -14,41 +13,26 @@ RUN apk add --no-cache \
     libjpeg-turbo-dev \
     giflib-dev
 
+COPY package*.json ./
+RUN npm ci
+
 COPY . .
-RUN npm ci && npm run build
+RUN npm run build && npm prune --production
 
 # Step 2: Production stage
 FROM node:24-alpine
 WORKDIR /app
 
-# 1. Install runtime libraries (required for canvas to work)
 RUN apk add --no-cache \
     pixman \
     cairo \
     pango \
     libjpeg-turbo \
-    giflib \
-    # Added these temporarily to allow 'npm install' to compile the native hook
-    python3 \
-    make \
-    g++ \
-    pkgconfig \
-    pixman-dev \
-    cairo-dev \
-    pango-dev \
-    libjpeg-turbo-dev \
-    giflib-dev
+    giflib
 
-COPY --from=build /app/package*.json ./
-
-# 2. REMOVE --ignore-scripts. Canvas needs its install script to link the binary.
-RUN npm ci --omit=dev
-
-# 3. Clean up build tools to keep image small
-RUN apk del python3 make g++ pkgconfig pixman-dev cairo-dev pango-dev libjpeg-turbo-dev giflib-dev
-
+COPY --from=build /app/node_modules ./node_modules
 COPY --from=build /app/static ./static
-COPY --from=build /app/build ./
+COPY --from=build /app/build ./build
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --start-interval=3s \
     CMD ["sh", "-c", "wget -q --spider http://127.0.0.1:3000/ || exit 1"]
