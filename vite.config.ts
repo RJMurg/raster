@@ -8,6 +8,12 @@ export default defineConfig({
 	ssr: {
 		external: ['canvas']
 	},
+	resolve: {
+		alias: {
+			// This prevents Vite from trying to process the native binary
+			canvas: 'canvas'
+		}
+	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [
