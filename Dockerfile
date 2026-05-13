@@ -21,21 +21,36 @@ RUN npm ci && npm run build
 FROM node:24-alpine
 WORKDIR /app
 
-# Install runtime dependencies (required for the compiled binary to run)
+# 1. Install runtime libraries (required for canvas to work)
 RUN apk add --no-cache \
     pixman \
     cairo \
     pango \
     libjpeg-turbo \
-    giflib
+    giflib \
+    # Added these temporarily to allow 'npm install' to compile the native hook
+    python3 \
+    make \
+    g++ \
+    pkgconfig \
+    pixman-dev \
+    cairo-dev \
+    pango-dev \
+    libjpeg-turbo-dev \
+    giflib-dev
+
+COPY --from=build /app/package*.json ./
+
+# 2. REMOVE --ignore-scripts. Canvas needs its install script to link the binary.
+RUN npm ci --omit=dev
+
+# 3. Clean up build tools to keep image small
+RUN apk del python3 make g++ pkgconfig pixman-dev cairo-dev pango-dev libjpeg-turbo-dev giflib-dev
 
 COPY --from=build /app/static ./static
-COPY --from=build /app/package*.json ./
-# Note: omit-dev still needs these libraries present to link correctly
-RUN npm ci --omit=dev --ignore-scripts
 COPY --from=build /app/build ./
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --start-interval=3s \
     CMD ["sh", "-c", "wget -q --spider http://127.0.0.1:3000/ || exit 1"]
 
-CMD ["node", "./"]
+CMD ["node", "build"]
