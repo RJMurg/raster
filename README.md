@@ -3,3 +3,7 @@
 # Raster
 
 Raster is a SvelteKit application which generates images to go at the top of READMEs.
+Designed to be served from the `/raster` path, to generate headers visit:
+```
+example.com/raster/header?title=Title%20Goes%20Here&subtitle=More%20text%20goes%20here
+```
