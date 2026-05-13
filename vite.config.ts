@@ -11,12 +11,6 @@ export default defineConfig({
 	optimizeDeps: {
 		exclude: ['canvas']
 	},
-	resolve: {
-		alias: {
-			// This prevents Vite from trying to process the native binary
-			canvas: 'canvas'
-		}
-	},
 	test: {
 		expect: { requireAssertions: true },
 		projects: [
