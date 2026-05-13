@@ -1,0 +1,23 @@
+name: 'Check - Run ESLint'
+
+on:
+  pull_request:
+
+jobs:
+  check-eslint:
+    runs-on: ubuntu-latest
+
+    permissions:
+      # Required to checkout the code
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: 'Install Node'
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20.x'
+      - name: 'Install Deps'
+        run: npm install eslint
+      - name: 'Lint'
+        run: npm run lint

@@ -1,0 +1,19 @@
+services:
+  web:
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.CHANGEME.rule=Host(`sub.example.com`)'
+      - 'traefik.http.services.CHANGEME.loadbalancer.server.port=3000'
+      - 'traefik.http.routers.CHANGEME.entrypoints=websecure'
+      - 'traefik.http.routers.CHANGEME.tls.certresolver=external-resolver'
+      - 'external-service=true'
+      - 'traefik.docker.network=traefik-external'
+    build: .
+    container_name: bla
+    environment:
+      # Analytics
+      PUBLIC_ENABLE_ANALYTICS: false
+      PUBLIC_ANALYTICS_LINK: CHANGEME
+      PUBLIC_ANALYTICS_ID: CHANGEME
+
+      # Feature Toggles
