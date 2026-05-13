@@ -1,4 +1,4 @@
-![](https://api.murga.cloud/raster/header?title=RASTER?subtitle=A%20README%20title%20image%20generator)
+![](https://api.murga.cloud/raster/header?title=RASTER&subtitle=A%20README%20title%20image%20generator)
 
 # Raster
 
