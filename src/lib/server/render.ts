@@ -1,10 +1,9 @@
-import { Resvg } from '@resvg/resvg-js';
-import satori from 'satori';
 import { FORMATS, TITLE_SIZES, type Format, type HeaderOptions } from '#lib/options.js';
 import { TEMPLATES, type Template, type TextStyle } from '#lib/templates.js';
 import type { Badge } from './badges';
-import { fonts, measurer } from './fonts';
-import { fit, type Block } from './layout';
+import { draw, h, lines, textStyle } from './draw';
+import { measurer } from './fonts';
+import { fit } from './layout';
 import { patternImage } from './pattern';
 
 interface Geometry {
@@ -61,38 +60,7 @@ const BAR_OFFSET = 10;
 /** How far a frame's hard shadow reaches */
 const SHADOW_ROOM = 10;
 
-type Node = { type: string; props: Record<string, unknown> };
-const h = (type: string, style: object, children?: Node | (Node | null)[] | string): Node => ({
-	type,
-	props: { style, children }
-});
-
-const textStyle = (style: TextStyle, size: number) => ({
-	fontFamily: style.font,
-	fontWeight: style.weight,
-	fontStyle: style.italic ? 'italic' : 'normal',
-	fontSize: size,
-	letterSpacing: (style.letterSpacing ?? 0) * size
-});
-
 const transform = (style: TextStyle, text: string) => (style.uppercase ? text.toUpperCase() : text);
-
-/** Laid out line by line so that what's drawn is exactly what was measured */
-function lines({ size, lineHeight, lines }: Block, center: boolean) {
-	return lines.map((line) =>
-		h(
-			'div',
-			{
-				display: 'flex',
-				justifyContent: center ? 'center' : 'flex-start',
-				height: Math.ceil(size * lineHeight),
-				lineHeight: `${Math.ceil(size * lineHeight)}px`,
-				whiteSpace: 'pre'
-			},
-			line
-		)
-	);
-}
 
 /** The badges at their full height, or smaller if they'd otherwise be too wide */
 function scaleBadges(badges: Badge[], width: number, gap: number) {
@@ -350,12 +318,7 @@ export function buildTree(options: HeaderOptions, badges: Badge[]) {
 export const badgeHeight = (format: Format) => GEOMETRY[format].badge.height;
 
 /** Draws a header as a PNG */
-export async function renderHeader(options: HeaderOptions, badges: Badge[] = []): Promise<Buffer> {
+export function renderHeader(options: HeaderOptions, badges: Badge[] = []) {
 	const { width, height } = FORMATS[options.format];
-
-	// satori's types expect React elements; the plain object tree is what it reads either way
-	const tree = buildTree(options, badges) as unknown as Parameters<typeof satori>[0];
-	const svg = await satori(tree, { width, height, fonts });
-
-	return new Resvg(svg, { fitTo: { mode: 'width', value: width } }).render().asPng();
+	return draw(buildTree(options, badges), width, height);
 }

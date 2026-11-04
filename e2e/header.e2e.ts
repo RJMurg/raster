@@ -38,14 +38,30 @@ test('still serves the image when a badge is not allowed', async ({ request }) =
 
 test('every example in the README renders', async ({ request }) => {
 	const readme = readFileSync('README.md', 'utf8');
-	const urls = readme.match(/https:\/\/api\.murga\.cloud\/raster\/header\?[^\s)"]+/g) ?? [];
+	const urls =
+		readme.match(/https:\/\/api\.murga\.cloud\/raster\/(?:header|notice)\?[^\s)"]+/g) ?? [];
 	expect(urls.length).toBeGreaterThan(20);
 
 	for (const url of new Set(urls)) {
 		// Badges are left out as this shouldn't depend on other people's servers being up
-		const query = new URLSearchParams(new URL(url).search);
+		const { pathname, search } = new URL(url);
+		const query = new URLSearchParams(search);
 		query.delete('badge');
-		const response = await request.get(`/raster/header?${query}`);
+		const response = await request.get(`${pathname}?${query}`);
 		expect(response.status(), url).toBe(200);
 	}
+});
+
+test('serves notices', async ({ request }) => {
+	const response = await request.get('/raster/notice?type=warning&message=Careful');
+
+	expect(response.status()).toBe(200);
+	expect(response.headers()['content-type']).toBe('image/png');
+	expect(response.headers()['cache-control']).toBe('public, max-age=3600');
+	expect((await size(response)).width).toBe(1600);
+});
+
+test('serves notices whatever the query says', async ({ request }) => {
+	const response = await request.get('/raster/notice?type=nope&theme=nope');
+	expect(response.status()).toBe(200);
 });

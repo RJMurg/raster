@@ -50,6 +50,12 @@ function breakWords(text: string, width: number, size: number, measure: Measure)
 		.join('\n');
 }
 
+/** Wraps text that has as many lines as it needs, so even the longest words have to fit */
+export function flow(text: string, width: number, size: number, measure: Measure) {
+	const safe: Measure = (line, lineSize) => measure(line, lineSize) * SAFETY;
+	return wrap(breakWords(text, width, size, safe), width, size, safe);
+}
+
 /** The narrowest wrapping with the same number of lines, so the last line isn't left stranded */
 export function balance(text: string, width: number, size: number, measure: Measure) {
 	const target = wrap(text, width, size, measure).length;

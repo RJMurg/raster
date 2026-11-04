@@ -2,6 +2,7 @@ import { BADGE_HOSTS } from '$app/env/private';
 import { parseOptions } from '#lib/options.js';
 import { DEFAULT_HOSTS, loadBadges } from '#lib/server/badges.js';
 import { Cache } from '#lib/server/cache.js';
+import { pngResponse } from '#lib/server/draw.js';
 import { badgeHeight, renderHeader } from '#lib/server/render.js';
 import type { RequestHandler } from './$types';
 
@@ -34,13 +35,5 @@ async function render(params: URLSearchParams) {
 
 export const GET: RequestHandler = async ({ url }) => {
 	const { png, maxAge } = await render(url.searchParams);
-
-	return new Response(png, {
-		headers: {
-			'content-type': 'image/png',
-			// GitHub and Forgejo proxy README images and respect this
-			'cache-control': `public, max-age=${maxAge}`,
-			'access-control-allow-origin': '*'
-		}
-	});
+	return pngResponse(png, maxAge);
 };

@@ -2,7 +2,7 @@
 
 # Raster
 
-Raster is a SvelteKit application which generates images to go at the top of READMEs, and for link previews.
+Raster is a SvelteKit application which generates images to go at the top of READMEs, for link previews, and [notices](#notices) for the things readers shouldn't miss.
 Everything about an image is in its URL, so it can be pasted straight into Markdown:
 
 ```markdown
@@ -352,3 +352,153 @@ As this makes the server fetch URLs, only these hosts are allowed:
 - `git.rjm.ie`
 
 Add others with the `BADGE_HOSTS` environment variable, as a comma-separated list of hostnames. Badges have to be HTTPS, and SVG or PNG.
+
+## Notices
+
+`/raster/notice` makes banners for the things readers shouldn't miss, with the same five types as [GitHub's alerts](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax#alerts). They're for anywhere those don't work, like a project page, a package registry or a chat message. They're 1600 pixels wide and as tall as their message needs, so it's never cut off.
+
+| Option    | Values                                                    | Default                |
+| --------- | --------------------------------------------------------- | ---------------------- |
+| `type`    | `note`, `tip`, `important`, `warning`, `caution`          | `note`                 |
+| `message` | Up to 500 characters. Newlines (`%0A`) force a line break | None                   |
+| `title`   | Up to 120 characters                                      | The name of the `type` |
+| `theme`   | `dark`, `light`                                           | `dark`                 |
+
+Text in an image can't be read by screen readers or found by searching, so repeat it in the alt text.
+
+### Dark
+
+**Note**
+
+![Note: Useful information that users should know, even when skimming content.](https://api.murga.cloud/raster/notice?type=note&message=Useful%20information%20that%20users%20should%20know%2C%20even%20when%20skimming%20content.)
+
+```
+https://api.murga.cloud/raster/notice?type=note&message=Useful%20information%20that%20users%20should%20know%2C%20even%20when%20skimming%20content.
+```
+
+**Tip**
+
+![Tip: Helpful advice for doing things better or more easily.](https://api.murga.cloud/raster/notice?type=tip&message=Helpful%20advice%20for%20doing%20things%20better%20or%20more%20easily.)
+
+```
+https://api.murga.cloud/raster/notice?type=tip&message=Helpful%20advice%20for%20doing%20things%20better%20or%20more%20easily.
+```
+
+**Important**
+
+![Important: Key information users need to know to achieve their goal.](https://api.murga.cloud/raster/notice?type=important&message=Key%20information%20users%20need%20to%20know%20to%20achieve%20their%20goal.)
+
+```
+https://api.murga.cloud/raster/notice?type=important&message=Key%20information%20users%20need%20to%20know%20to%20achieve%20their%20goal.
+```
+
+**Warning**
+
+![Warning: Urgent info that needs immediate user attention to avoid problems.](https://api.murga.cloud/raster/notice?type=warning&message=Urgent%20info%20that%20needs%20immediate%20user%20attention%20to%20avoid%20problems.)
+
+```
+https://api.murga.cloud/raster/notice?type=warning&message=Urgent%20info%20that%20needs%20immediate%20user%20attention%20to%20avoid%20problems.
+```
+
+**Caution**
+
+![Caution: Advises about risks or negative outcomes of certain actions.](https://api.murga.cloud/raster/notice?type=caution&message=Advises%20about%20risks%20or%20negative%20outcomes%20of%20certain%20actions.)
+
+```
+https://api.murga.cloud/raster/notice?type=caution&message=Advises%20about%20risks%20or%20negative%20outcomes%20of%20certain%20actions.
+```
+
+### Light
+
+**Note**
+
+![Note: Useful information that users should know, even when skimming content.](https://api.murga.cloud/raster/notice?type=note&message=Useful%20information%20that%20users%20should%20know%2C%20even%20when%20skimming%20content.&theme=light)
+
+```
+https://api.murga.cloud/raster/notice?type=note&message=Useful%20information%20that%20users%20should%20know%2C%20even%20when%20skimming%20content.&theme=light
+```
+
+**Tip**
+
+![Tip: Helpful advice for doing things better or more easily.](https://api.murga.cloud/raster/notice?type=tip&message=Helpful%20advice%20for%20doing%20things%20better%20or%20more%20easily.&theme=light)
+
+```
+https://api.murga.cloud/raster/notice?type=tip&message=Helpful%20advice%20for%20doing%20things%20better%20or%20more%20easily.&theme=light
+```
+
+**Important**
+
+![Important: Key information users need to know to achieve their goal.](https://api.murga.cloud/raster/notice?type=important&message=Key%20information%20users%20need%20to%20know%20to%20achieve%20their%20goal.&theme=light)
+
+```
+https://api.murga.cloud/raster/notice?type=important&message=Key%20information%20users%20need%20to%20know%20to%20achieve%20their%20goal.&theme=light
+```
+
+**Warning**
+
+![Warning: Urgent info that needs immediate user attention to avoid problems.](https://api.murga.cloud/raster/notice?type=warning&message=Urgent%20info%20that%20needs%20immediate%20user%20attention%20to%20avoid%20problems.&theme=light)
+
+```
+https://api.murga.cloud/raster/notice?type=warning&message=Urgent%20info%20that%20needs%20immediate%20user%20attention%20to%20avoid%20problems.&theme=light
+```
+
+**Caution**
+
+![Caution: Advises about risks or negative outcomes of certain actions.](https://api.murga.cloud/raster/notice?type=caution&message=Advises%20about%20risks%20or%20negative%20outcomes%20of%20certain%20actions.&theme=light)
+
+```
+https://api.murga.cloud/raster/notice?type=caution&message=Advises%20about%20risks%20or%20negative%20outcomes%20of%20certain%20actions.&theme=light
+```
+
+### More
+
+**A custom title**
+
+![Deprecated: This API will be removed in the next major version.](https://api.murga.cloud/raster/notice?type=warning&title=Deprecated&message=This%20API%20will%20be%20removed%20in%20the%20next%20major%20version.)
+
+```
+https://api.murga.cloud/raster/notice?type=warning&title=Deprecated&message=This%20API%20will%20be%20removed%20in%20the%20next%20major%20version.
+```
+
+**A long message**
+
+![Important: Notices grow to fit what they have to say, so a longer message simply wraps onto more lines and makes the image taller. Nothing gets shrunk or cut off with an ellipsis, up to the limit of 500 characters.](https://api.murga.cloud/raster/notice?type=important&message=Notices%20grow%20to%20fit%20what%20they%20have%20to%20say%2C%20so%20a%20longer%20message%20simply%20wraps%20onto%20more%20lines%20and%20makes%20the%20image%20taller.%20Nothing%20gets%20shrunk%20or%20cut%20off%20with%20an%20ellipsis%2C%20up%20to%20the%20limit%20of%20500%20characters.)
+
+```
+https://api.murga.cloud/raster/notice?type=important&message=Notices%20grow%20to%20fit%20what%20they%20have%20to%20say%2C%20so%20a%20longer%20message%20simply%20wraps%20onto%20more%20lines%20and%20makes%20the%20image%20taller.%20Nothing%20gets%20shrunk%20or%20cut%20off%20with%20an%20ellipsis%2C%20up%20to%20the%20limit%20of%20500%20characters.
+```
+
+**Forced line breaks**
+
+![Tip: Run the migrations, then restart the server.](https://api.murga.cloud/raster/notice?type=tip&message=1.%20Run%20the%20migrations%0A2.%20Restart%20the%20server)
+
+```
+https://api.murga.cloud/raster/notice?type=tip&message=1.%20Run%20the%20migrations%0A2.%20Restart%20the%20server
+```
+
+**A title on its own**
+
+![Caution: Experimental](https://api.murga.cloud/raster/notice?type=caution&title=Experimental)
+
+```
+https://api.murga.cloud/raster/notice?type=caution&title=Experimental
+```
+
+### Matching the reader's theme
+
+GitHub tells images which theme is in use through `<picture>`:
+
+```html
+<picture>
+	<source
+		media="(prefers-color-scheme: dark)"
+		srcset="
+			https://api.murga.cloud/raster/notice?type=warning&message=Back%20up%20your%20data%20first.
+		"
+	/>
+	<img
+		src="https://api.murga.cloud/raster/notice?type=warning&message=Back%20up%20your%20data%20first.&theme=light"
+		alt="Warning: Back up your data first."
+	/>
+</picture>
+```

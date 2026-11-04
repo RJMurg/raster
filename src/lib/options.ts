@@ -49,11 +49,11 @@ const bool = (value: string | null) => {
 	return !['false', '0', 'no', 'off'].includes(value.toLowerCase());
 };
 
-const oneOf = <T extends string>(value: string | null, options: Record<T, unknown>) =>
+export const oneOf = <T extends string>(value: string | null, options: Record<T, unknown>) =>
 	value !== null && Object.hasOwn(options, value) ? (value as T) : undefined;
 
 /** Control characters are dropped, and newlines are kept as they force a line break */
-const clean = (value: string | null, maxLength: number) =>
+export const clean = (value: string | null, maxLength: number) =>
 	[...(value ?? '').replace(/\r\n?/g, '\n').replace(/[^\P{Cc}\n]/gu, '')]
 		.slice(0, maxLength)
 		.join('')
