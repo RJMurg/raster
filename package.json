@@ -1,7 +1,7 @@
 {
 	"name": "raster",
 	"private": true,
-	"version": "2.1.0",
+	"version": "2.2.0",
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
@@ -44,7 +44,6 @@
 		"eslint-config-prettier": "^10.1.8",
 		"eslint-plugin-svelte": "^3.17.0",
 		"globals": "^17.4.0",
-		"mode-watcher": "^1.1.0",
 		"playwright": "^1.59.1",
 		"prettier": "^3.8.1",
 		"prettier-plugin-svelte": "^3.5.1",

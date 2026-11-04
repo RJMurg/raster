@@ -1,12 +1,11 @@
 <script lang="ts">
 	import './layout.css';
-	import { ModeWatcher } from 'mode-watcher';
 	import {
 		PUBLIC_ENABLE_ANALYTICS,
 		PUBLIC_ANALYTICS_LINK,
 		PUBLIC_ANALYTICS_ID
 	} from '$app/env/public';
-	import favicon from '#lib/assets/favicon.svg';
+	import favicon from '#lib/assets/favicon.png';
 
 	let { children } = $props();
 </script>
@@ -27,5 +26,4 @@
 	{/if}
 </svelte:head>
 
-<ModeWatcher />
 {@render children()}
