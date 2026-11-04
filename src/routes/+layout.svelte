@@ -1,8 +1,12 @@
 <script lang="ts">
 	import './layout.css';
 	import { ModeWatcher } from 'mode-watcher';
-	import { env as publicEnv } from '$env/dynamic/public';
-	import favicon from '$lib/assets/favicon.svg';
+	import {
+		PUBLIC_ENABLE_ANALYTICS,
+		PUBLIC_ANALYTICS_LINK,
+		PUBLIC_ANALYTICS_ID
+	} from '$app/env/public';
+	import favicon from '#lib/assets/favicon.svg';
 
 	let { children } = $props();
 </script>
@@ -17,12 +21,8 @@
 		rel="stylesheet"
 	/>
 
-	{#if publicEnv.PUBLIC_ENABLE_ANALYTICS}
-		<script
-			src={publicEnv.PUBLIC_ANALYTICS_LINK}
-			data-site-id={publicEnv.PUBLIC_ANALYTICS_ID}
-			defer
-		>
+	{#if PUBLIC_ENABLE_ANALYTICS}
+		<script src={PUBLIC_ANALYTICS_LINK} data-site-id={PUBLIC_ANALYTICS_ID} defer>
 		</script>
 	{/if}
 </svelte:head>

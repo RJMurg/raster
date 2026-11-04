@@ -16,4 +16,7 @@ services:
       PUBLIC_ANALYTICS_LINK: CHANGEME
       PUBLIC_ANALYTICS_ID: CHANGEME
 
+      # Badges: extra hostnames to allow, comma-separated
+      BADGE_HOSTS: ''
+
       # Feature Toggles

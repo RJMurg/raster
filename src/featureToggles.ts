@@ -1,10 +1,6 @@
-import type { Handle } from '@sveltejs/kit';
-import { env } from '$env/dynamic/private';
-import { env as publicEnv } from '$env/dynamic/public';
+import type { Handle } from '@sveltejs/kit/hooks';
 
-export interface FeatureFlags {}
-
-const isEnabled = (value: string | undefined): boolean => value?.toLowerCase() === 'true';
+export type FeatureFlags = Record<string, never>;
 
 export const featureTogglesHandler: Handle = async ({ event, resolve }) => {
 	event.locals.flags = {};

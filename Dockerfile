@@ -1,40 +1,43 @@
-# Step 1: Build stage
-FROM node:24-alpine AS build
+# syntax=docker/dockerfile:1
+ARG NODE_IMAGE=node:24-alpine
+
+# Everything needed to build. Only the manifests are copied, so this layer is reused until the
+# dependencies change
+FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --no-audit --no-fund --ignore-scripts
 
-RUN apk add --no-cache \
-    python3 \
-    make \
-    g++ \
-    pkgconfig \
-    pixman-dev \
-    cairo-dev \
-    pango-dev \
-    libjpeg-turbo-dev \
-    giflib-dev
+# Only what the built server imports at runtime; everything else is bundled into build/
+FROM ${NODE_IMAGE} AS prod-deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund --ignore-scripts
 
-COPY package*.json ./
-RUN npm ci
-
+FROM deps AS build
 COPY . .
-RUN npm run build && npm prune --production
+RUN npx svelte-kit sync && npm run build
 
-# Step 2: Production stage
-FROM node:24-alpine
+FROM ${NODE_IMAGE} AS app
 WORKDIR /app
 
-RUN apk add --no-cache \
-    pixman \
-    cairo \
-    pango \
-    libjpeg-turbo \
-    giflib
+# Nothing runs npm at runtime, so drop it (and the vulnerabilities its bundled dependencies collect)
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+    /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/static ./static
+ENV NODE_ENV=production
+ENV PORT=3000
+
+# Files stay root-owned (read-only to the app's user)
+COPY package.json ./
+COPY --from=prod-deps /app/node_modules ./node_modules
 COPY --from=build /app/build ./build
 
+USER node
+EXPOSE 3000
+
+# The app is served from /raster, so / is a 404
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --start-interval=3s \
-    CMD ["sh", "-c", "wget -q --spider http://127.0.0.1:3000/ || exit 1"]
+    CMD ["sh", "-c", "wget -q --spider http://127.0.0.1:3000/raster/ || exit 1"]
 
 CMD ["node", "build"]
