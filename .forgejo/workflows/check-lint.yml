@@ -7,10 +7,6 @@ jobs:
   check-eslint:
     runs-on: ubuntu-latest
 
-    permissions:
-      # Required to checkout the code
-      contents: read
-
     steps:
       - uses: actions/checkout@v4
       - name: 'Install Node'
