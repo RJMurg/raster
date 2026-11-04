@@ -6,21 +6,8 @@ env:
 
 on:
   push:
-    branches: ['main', 'master']
-    paths:
-      # We need to include everything then exclude the files we don't want to trigger the workflow
-      - '**'
-      - '!docs/**'
-      - '!LICENSE.md'
-      - '!README.md'
-      - '!.prettierignore'
-      - '!.prettierrc'
-      - '!eslint.config.js'
-      - '!e2e/**'
-      - '!playwright.config.ts'
-      - '!.env.example'
-      - '!.mcp.json'
-      - '!.forgejo/workflows/check-*.yml'
+    tags:
+      - '*'
 
 jobs:
   build:
@@ -44,9 +31,10 @@ jobs:
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
           tags: |
+            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
             type=sha,format=long
-            type=match,pattern=main
-            type=raw,value=latest,enable={{is_default_branch}}
           flavor: |
             latest=auto
 
