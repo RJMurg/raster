@@ -1,13 +1,14 @@
 name: Build & Publish Docker Image
 
 env:
-  REGISTRY: git.rjm.ie
+  REGISTRY: ${{ secrets.ZOT_REGISTRY }}
   IMAGE_NAME: ${{ github.repository }}
 
 on:
   push:
     branches: ['main', 'master']
     paths:
+      # We need to include everything then exclude the files we don't want to trigger the workflow
       - '**'
       - '!docs/**'
       - '!LICENSE.md'
@@ -15,29 +16,29 @@ on:
       - '!.prettierignore'
       - '!.prettierrc'
       - '!eslint.config.js'
-      - '!.github/workflows/run-tests.yml'
-      - '!.github/workflows/test-build.yml'
+      - '!e2e/**'
       - '!playwright.config.ts'
       - '!.env.example'
       - '!.mcp.json'
-      - 'CLAUDE.md'
+      - '!.forgejo/workflows/check-*.yml'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
     timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
-      - name: Log in to the Container registry
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Zot
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.REGISTRY_SECRET }}
+          username: ${{ secrets.ZOT_USER }}
+          password: ${{ secrets.ZOT_PASSWORD }}
 
       - name: Extract metadata for Docker
         id: meta
@@ -51,10 +52,166 @@ jobs:
           flavor: |
             latest=auto
 
+      # Recorded before the push moves `latest`, so the summary can compare sizes with the previous image
+      - name: Find previous image
+        id: previous
+        run: |
+          digest=$(docker buildx imagetools inspect "$REGISTRY/$IMAGE_NAME:latest" --format '{{ .Manifest.Digest }}' 2>/dev/null) || exit 0
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
       - name: Build and push
+        id: push
         uses: docker/build-push-action@v6
         with:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          annotations: ${{ steps.meta.outputs.annotations }}
+          # Build provenance and an SBOM, stored next to the image as attestations, so you can check what went into it
+          provenance: mode=max
+          sbom: true
+          # Runners are ephemeral, so keep the layer cache in the registry. It's written by the next
+          # step, not here (see there)
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+          # Push OCI media types so Zot accepts the image without docker2s2 compat
+          outputs: type=image,oci-mediatypes=true
+
+      # Exported once the image is pushed rather than alongside it: both upload the same layers to the
+      # same repository, and when they overlap Zot can lose a blob mid-push ("blob unknown to
+      # registry"). Everything is in the builder's local cache by now, so nothing is rebuilt. A
+      # failure only makes the next build slower, so it doesn't fail the publish.
+      - name: Export build cache
+        continue-on-error: true
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          provenance: false
+          sbom: false
+          cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max,image-manifest=true,oci-mediatypes=true
+          outputs: type=cacheonly
+
+      # Downloaded directly: sigstore/cosign-installer needs envsubst, which the runner image doesn't have.
+      # The checksum is from the release's cosign_checksums.txt; update both together
+      - name: Install cosign
+        env:
+          COSIGN_VERSION: v3.1.4
+          COSIGN_SHA256: 424e2c97d0b45fd7a6b608a87f090f35633f4c23ece5f092d48bba11aaf4bbfa
+        run: |
+          curl -fsSL -o /usr/local/bin/cosign \
+            "https://github.com/sigstore/cosign/releases/download/$COSIGN_VERSION/cosign-linux-amd64"
+          echo "$COSIGN_SHA256  /usr/local/bin/cosign" | sha256sum -c -
+          chmod +x /usr/local/bin/cosign
+
+      # Signs by digest, as tags can be moved. The digest is an image index that also references the
+      # provenance and SBOM, so they're covered too. Signatures are stored in Zot next to the image,
+      # and not uploaded to the public Rekor log (cosign 3 needs --use-signing-config=false for that).
+      # Uses the same key as traqit, overometer and the blog; check with deploy/cosign.pub
+      - name: Sign image
+        id: sign
+        env:
+          COSIGN_PRIVATE_KEY: ${{ secrets.COSIGN_PRIVATE_KEY }}
+          COSIGN_PASSWORD: ${{ secrets.COSIGN_PASSWORD }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          cosign sign --yes --key env://COSIGN_PRIVATE_KEY --use-signing-config=false --tlog-upload=false \
+            "$REGISTRY/$IMAGE_NAME@$DIGEST"
+
+      - name: Install Trivy
+        if: ${{ !cancelled() && steps.push.outcome == 'success' }}
+        env:
+          TRIVY_VERSION: '0.75.0'
+        run: |
+          base="https://github.com/aquasecurity/trivy/releases/download/v${TRIVY_VERSION}"
+          cd "$RUNNER_TEMP"
+          curl -fsSLO "$base/trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz"
+          curl -fsSLO "$base/trivy_${TRIVY_VERSION}_checksums.txt"
+          sha256sum --check --ignore-missing "trivy_${TRIVY_VERSION}_checksums.txt"
+          tar -xzf "trivy_${TRIVY_VERSION}_Linux-64bit.tar.gz" trivy
+          echo "$RUNNER_TEMP" >> "$GITHUB_PATH"
+
+      # Scans the pushed image by digest, using the Zot login above. Reported in the summary only: the image
+      # is already published, so failing here wouldn't stop it being used
+      - name: Scan image
+        id: scan
+        if: ${{ !cancelled() && steps.push.outcome == 'success' }}
+        env:
+          DIGEST: ${{ steps.push.outputs.digest }}
+        run: |
+          trivy image --quiet --scanners vuln --image-src remote --format json --output "$RUNNER_TEMP/trivy.json" "$REGISTRY/$IMAGE_NAME@$DIGEST"
+          trivy convert --format table --output "$RUNNER_TEMP/trivy.txt" "$RUNNER_TEMP/trivy.json"
+
+      - name: Write job summary
+        if: always()
+        env:
+          RESULT: ${{ steps.push.outcome }}
+          SIGNED: ${{ steps.sign.outcome }}
+          SCAN: ${{ steps.scan.outcome }}
+          DIGEST: ${{ steps.push.outputs.digest }}
+          PREVIOUS_DIGEST: ${{ steps.previous.outputs.digest }}
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          icon() { case "$1" in success) echo '✅' ;; failure) echo '❌' ;; cancelled) echo '🚫' ;; *) echo '⏭️' ;; esac; }
+          # Compressed size of the image as pulled: its linux/amd64 manifest's config and layers, read from the registry
+          size_of() {
+            raw=$(docker buildx imagetools inspect "$REGISTRY/$IMAGE_NAME@$1" --raw) || return 1
+            platform=$(echo "$raw" | jq -r '[.manifests[]? | select(.platform.os != "unknown")][0].digest // empty')
+            if [ -n "$platform" ]; then
+              raw=$(docker buildx imagetools inspect "$REGISTRY/$IMAGE_NAME@$platform" --raw) || return 1
+            fi
+            echo "$raw" | jq '[.config.size, .layers[].size] | add'
+          }
+          image="$REGISTRY/$IMAGE_NAME@$DIGEST"
+          {
+            echo '## Docker image'
+            echo
+            echo "### $(icon "$RESULT") Build and push: $RESULT"
+            if [ "$RESULT" = success ]; then
+              echo
+              echo "**Digest:** \`$DIGEST\`"
+              if size=$(size_of "$DIGEST"); then
+                echo
+                change=''
+                if [ -n "$PREVIOUS_DIGEST" ] && previous=$(size_of "$PREVIOUS_DIGEST"); then
+                  delta=$((size - previous))
+                  if [ "$delta" -lt 0 ]; then sign='−'; delta=$((-delta)); else sign='+'; fi
+                  change=" ($sign$(numfmt --to=iec "$delta") vs the previous \`latest\`)"
+                fi
+                echo "**Size:** $(numfmt --to=iec "$size")$change"
+              fi
+              echo
+              echo '**Tags:**'
+              echo
+              echo "$TAGS" | sed '/^$/d; s/.*/- `&`/'
+              echo
+              echo '```sh'
+              echo "docker pull $image"
+              if [ "$SIGNED" = success ]; then
+                echo "cosign verify --key deploy/cosign.pub --insecure-ignore-tlog $image"
+              fi
+              echo '```'
+            fi
+            echo
+            echo "### $(icon "$SIGNED") Signing: $SIGNED"
+            echo
+            echo "### $(icon "$SCAN") Vulnerability scan: $SCAN"
+            if [ -f "$RUNNER_TEMP/trivy.json" ]; then
+              echo
+              echo '| Severity | Total | Fix available |'
+              echo '| --- | --- | --- |'
+              for severity in CRITICAL HIGH MEDIUM LOW; do
+                total=$(jq "[.Results[]?.Vulnerabilities[]? | select(.Severity == \"$severity\")] | length" "$RUNNER_TEMP/trivy.json")
+                fixable=$(jq "[.Results[]?.Vulnerabilities[]? | select(.Severity == \"$severity\" and .FixedVersion != null and .FixedVersion != \"\")] | length" "$RUNNER_TEMP/trivy.json")
+                echo "| $severity | $total | $fixable |"
+              done
+              echo
+              echo '<details><summary>Full report</summary>'
+              echo
+              echo '```'
+              cat "$RUNNER_TEMP/trivy.txt"
+              echo '```'
+              echo
+              echo '</details>'
+            fi
+          } >> "$FORGEJO_STEP_SUMMARY"
