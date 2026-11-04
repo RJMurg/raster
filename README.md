@@ -6,7 +6,7 @@ Raster is a SvelteKit application which generates images to go at the top of REA
 Everything about an image is in its URL, so it can be pasted straight into Markdown:
 
 ```markdown
-![My Project](https://example.com/raster/header?title=My%20Project&subtitle=What%20it%20does)
+![My Project](https://api.murga.cloud/raster/header?title=My%20Project&subtitle=What%20it%20does)
 ```
 
 Visit `/raster` for a builder that previews images as you type and gives you the Markdown.
